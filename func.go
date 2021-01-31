@@ -15,10 +15,10 @@ func GetQueueUrl(client *sqs.SQS, queueName string) (string, error) {
 	return *result.QueueUrl, err
 }
 
-func MapToAttributes(messageAttributes *map[string]string) map[string]*sqs.MessageAttributeValue {
+func MapToAttributes(messageAttributes map[string]string) map[string]*sqs.MessageAttributeValue {
 	attributes := make(map[string]*sqs.MessageAttributeValue)
 	if messageAttributes != nil {
-		for k, v := range *messageAttributes {
+		for k, v := range messageAttributes {
 			x := sqs.MessageAttributeValue{
 				DataType:    aws.String("String"),
 				StringValue: aws.String(v),

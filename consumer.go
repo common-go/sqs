@@ -28,7 +28,7 @@ func NewConsumer(client *sqs.SQS, queueURL string, ackOnConsume bool, visibility
 	return &Consumer{Client: client, QueueURL: &queueURL, AckOnConsume: ackOnConsume, VisibilityTimeout: visibilityTimeout, WaitTimeSeconds: waitTimeSeconds}
 }
 
-func (c *Consumer) Consume(ctx context.Context, caller mq.ConsumerCaller) {
+func (c *Consumer) Consume(ctx context.Context, handle func(context.Context, *mq.Message, error) error) {
 	result, er1 := c.Client.ReceiveMessage(&sqs.ReceiveMessageInput{
 		AttributeNames: []*string{
 			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
@@ -42,7 +42,7 @@ func (c *Consumer) Consume(ctx context.Context, caller mq.ConsumerCaller) {
 		WaitTimeSeconds:     aws.Int64(c.WaitTimeSeconds),
 	})
 	if er1 != nil {
-		caller.Call(ctx, nil, er1)
+		handle(ctx, nil, er1)
 	} else {
 		if len(result.Messages) > 0 {
 			m := result.Messages[0]
@@ -60,12 +60,12 @@ func (c *Consumer) Consume(ctx context.Context, caller mq.ConsumerCaller) {
 					ReceiptHandle: result.Messages[0].ReceiptHandle,
 				})
 				if er2 != nil {
-					caller.Call(ctx, nil, er2)
+					handle(ctx, nil, er2)
 				} else {
-					caller.Call(ctx, &message, nil)
+					handle(ctx, &message, nil)
 				}
 			} else {
-				caller.Call(ctx, &message, nil)
+				handle(ctx, &message, nil)
 			}
 		}
 	}

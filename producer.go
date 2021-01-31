@@ -25,7 +25,7 @@ func NewProducer(client *sqs.SQS, queueURL string, delaySeconds *int64) *Produce
 	return &Producer{Client: client, QueueURL: &queueURL, DelaySeconds: delaySeconds}
 }
 
-func (p *Producer) Produce(ctx context.Context, data []byte, messageAttributes *map[string]string) (string, error) {
+func (p *Producer) Produce(ctx context.Context, data []byte, messageAttributes map[string]string) (string, error) {
 	attributes := MapToAttributes(messageAttributes)
 	s := string(data)
 	result, err := p.Client.SendMessage(&sqs.SendMessageInput{
