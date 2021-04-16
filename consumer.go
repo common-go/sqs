@@ -29,46 +29,50 @@ func NewConsumer(client *sqs.SQS, queueURL string, ackOnConsume bool, visibility
 }
 
 func (c *Consumer) Consume(ctx context.Context, handle func(context.Context, *mq.Message, error) error) {
-	result, er1 := c.Client.ReceiveMessage(&sqs.ReceiveMessageInput{
-		AttributeNames: []*string{
-			aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
-		},
-		MessageAttributeNames: []*string{
-			aws.String(sqs.QueueAttributeNameAll),
-		},
-		QueueUrl:            c.QueueURL,
-		MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout:   aws.Int64(c.VisibilityTimeout), // 20 seconds
-		WaitTimeSeconds:     aws.Int64(c.WaitTimeSeconds),
-	})
-	if er1 != nil {
-		handle(ctx, nil, er1)
-	} else {
-		if len(result.Messages) > 0 {
-			m := result.Messages[0]
-			data := []byte(*m.Body)
-			attributes := PtrToMap(m.Attributes)
-			message := mq.Message{
-				Id:         *m.MessageId,
-				Data:       data,
-				Attributes: attributes,
-				Raw:        m,
-			}
-			if c.AckOnConsume {
-				_, er2 := c.Client.DeleteMessage(&sqs.DeleteMessageInput{
-					QueueUrl:      c.QueueURL,
-					ReceiptHandle: result.Messages[0].ReceiptHandle,
-				})
-				if er2 != nil {
-					handle(ctx, nil, er2)
+	var result *sqs.ReceiveMessageOutput
+	var er1 error
+	loop:
+		result, er1 = c.Client.ReceiveMessage(&sqs.ReceiveMessageInput{
+			AttributeNames: []*string{
+				aws.String(sqs.MessageSystemAttributeNameSentTimestamp),
+			},
+			MessageAttributeNames: []*string{
+				aws.String(sqs.QueueAttributeNameAll),
+			},
+			QueueUrl:            c.QueueURL,
+			MaxNumberOfMessages: aws.Int64(1),
+			VisibilityTimeout:   aws.Int64(c.VisibilityTimeout), // 20 seconds
+			WaitTimeSeconds:     aws.Int64(c.WaitTimeSeconds),
+		})
+		if er1 != nil {
+			handle(ctx, nil, er1)
+		} else {
+			if len(result.Messages) > 0 {
+				m := result.Messages[0]
+				data := []byte(*m.Body)
+				attributes := PtrToMap(m.Attributes)
+				message := mq.Message{
+					Id:         *m.MessageId,
+					Data:       data,
+					Attributes: attributes,
+					Raw:        m,
+				}
+				if c.AckOnConsume {
+					_, er2 := c.Client.DeleteMessage(&sqs.DeleteMessageInput{
+						QueueUrl:      c.QueueURL,
+						ReceiptHandle: result.Messages[0].ReceiptHandle,
+					})
+					if er2 != nil {
+						handle(ctx, nil, er2)
+					} else {
+						handle(ctx, &message, nil)
+					}
 				} else {
 					handle(ctx, &message, nil)
 				}
-			} else {
-				handle(ctx, &message, nil)
 			}
 		}
-	}
+		goto loop
 }
 
 func PtrToMap(m map[string]*string) map[string]string {
