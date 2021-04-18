@@ -11,10 +11,10 @@ type HealthChecker struct {
 	Service   string
 }
 
-func NewSQSHealthChecker(client *sqs.SQS, queueName string) *HealthChecker {
-	return NewHealthChecker(client, queueName, "sqs")
+func NewHealthChecker(client *sqs.SQS, queueName string) *HealthChecker {
+	return NewSQSHealthChecker(client, queueName, "sqs")
 }
-func NewHealthChecker(client *sqs.SQS, name string, queueName string) *HealthChecker {
+func NewSQSHealthChecker(client *sqs.SQS, name string, queueName string) *HealthChecker {
 	return &HealthChecker{client, &queueName, name}
 }
 
