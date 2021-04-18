@@ -2,13 +2,12 @@ package sqs
 
 import (
 	"context"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/common-go/mq"
 )
 
-type Consumer struct {
+type Receiver struct {
 	Client            *sqs.SQS
 	QueueURL          *string
 	AckOnConsume      bool
@@ -16,19 +15,19 @@ type Consumer struct {
 	WaitTimeSeconds   int64 // should be 0
 }
 
-func NewConsumerByQueueName(client *sqs.SQS, queueName string, ackOnConsume bool, visibilityTimeout int64, waitTimeSeconds int64) (*Consumer, error) {
+func NewReceiverByQueueName(client *sqs.SQS, queueName string, ackOnConsume bool, visibilityTimeout int64, waitTimeSeconds int64) (*Receiver, error) {
 	queueUrl, err := GetQueueUrl(client, queueName)
 	if err != nil {
 		return nil, err
 	}
-	return NewConsumer(client, queueUrl, ackOnConsume, visibilityTimeout, waitTimeSeconds), nil
+	return NewReceiver(client, queueUrl, ackOnConsume, visibilityTimeout, waitTimeSeconds), nil
 }
 
-func NewConsumer(client *sqs.SQS, queueURL string, ackOnConsume bool, visibilityTimeout int64, waitTimeSeconds int64) *Consumer {
-	return &Consumer{Client: client, QueueURL: &queueURL, AckOnConsume: ackOnConsume, VisibilityTimeout: visibilityTimeout, WaitTimeSeconds: waitTimeSeconds}
+func NewReceiver(client *sqs.SQS, queueURL string, ackOnConsume bool, visibilityTimeout int64, waitTimeSeconds int64) *Receiver {
+	return &Receiver{Client: client, QueueURL: &queueURL, AckOnConsume: ackOnConsume, VisibilityTimeout: visibilityTimeout, WaitTimeSeconds: waitTimeSeconds}
 }
 
-func (c *Consumer) Consume(ctx context.Context, handle func(context.Context, *mq.Message, error) error) {
+func (c *Receiver) Receive(ctx context.Context, handle func(context.Context, *mq.Message, error) error) {
 	var result *sqs.ReceiveMessageOutput
 	var er1 error
 	loop:
