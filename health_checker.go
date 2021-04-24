@@ -11,11 +11,17 @@ type HealthChecker struct {
 	Service   string
 }
 
-func NewHealthChecker(client *sqs.SQS, queueName string) *HealthChecker {
-	return NewSQSHealthChecker(client, queueName, "sqs")
+func NewHealthChecker(client *sqs.SQS, queueName string, options...string) *HealthChecker {
+	var name string
+	if len(options) > 0 && len(options[0]) > 0 {
+		name = options[0]
+	} else {
+		name = "sqs"
+	}
+	return NewSQSHealthChecker(client, name, queueName)
 }
 func NewSQSHealthChecker(client *sqs.SQS, name string, queueName string) *HealthChecker {
-	return &HealthChecker{client, &queueName, name}
+	return &HealthChecker{Client: client, QueueName: &queueName, Service: name}
 }
 
 func (h *HealthChecker) Name() string {
