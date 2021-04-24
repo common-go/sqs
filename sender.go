@@ -24,12 +24,12 @@ func NewSender(client *sqs.SQS, queueURL string, delaySeconds *int64) *Sender {
 	return &Sender{Client: client, QueueURL: &queueURL, DelaySeconds: delaySeconds}
 }
 
-func (p *Sender) Send(ctx context.Context, data []byte, messageAttributes map[string]string) (string, error) {
-	attributes := MapToAttributes(messageAttributes)
+func (p *Sender) Send(ctx context.Context, data []byte, attributes map[string]string) (string, error) {
+	attrs := MapToAttributes(attributes)
 	s := string(data)
 	result, err := p.Client.SendMessage(&sqs.SendMessageInput{
 		DelaySeconds:      p.DelaySeconds,
-		MessageAttributes: attributes,
+		MessageAttributes: attrs,
 		MessageBody:       aws.String(s),
 		QueueUrl:          p.QueueURL,
 	})

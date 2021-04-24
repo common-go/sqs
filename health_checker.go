@@ -3,15 +3,17 @@ package sqs
 import (
 	"context"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"time"
 )
 
 type HealthChecker struct {
 	Client    *sqs.SQS
 	QueueName *string
 	Service   string
+	Timeout   time.Duration
 }
 
-func NewHealthChecker(client *sqs.SQS, queueName string, options...string) *HealthChecker {
+func NewHealthChecker(client *sqs.SQS, queueName string, options ...string) *HealthChecker {
 	var name string
 	if len(options) > 0 && len(options[0]) > 0 {
 		name = options[0]
@@ -20,8 +22,14 @@ func NewHealthChecker(client *sqs.SQS, queueName string, options...string) *Heal
 	}
 	return NewSQSHealthChecker(client, name, queueName)
 }
-func NewSQSHealthChecker(client *sqs.SQS, name string, queueName string) *HealthChecker {
-	return &HealthChecker{Client: client, QueueName: &queueName, Service: name}
+func NewSQSHealthChecker(client *sqs.SQS, name string, queueName string, options ...time.Duration) *HealthChecker {
+	var timeout time.Duration
+	if len(options) >= 1 && options[0] > 0 {
+		timeout = options[0]
+	} else {
+		timeout = 4 * time.Second
+	}
+	return &HealthChecker{Client: client, QueueName: &queueName, Service: name, Timeout: timeout}
 }
 
 func (h *HealthChecker) Name() string {
