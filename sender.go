@@ -12,7 +12,7 @@ type Sender struct {
 	DelaySeconds *int64 //could be 10
 }
 
-func NewSenderByQueueName(client *sqs.SQS, queueName string, delaySeconds *int64) (*Sender, error) {
+func NewSenderByQueueName(client *sqs.SQS, queueName string, delaySeconds int64) (*Sender, error) {
 	queueUrl, err := GetQueueUrl(client, queueName)
 	if err != nil {
 		return nil, err
@@ -20,19 +20,34 @@ func NewSenderByQueueName(client *sqs.SQS, queueName string, delaySeconds *int64
 	return NewSender(client, queueUrl, delaySeconds), nil
 }
 
-func NewSender(client *sqs.SQS, queueURL string, delaySeconds *int64) *Sender {
-	return &Sender{Client: client, QueueURL: &queueURL, DelaySeconds: delaySeconds}
+func NewSender(client *sqs.SQS, queueURL string, delaySeconds int64) *Sender {
+	return &Sender{Client: client, QueueURL: &queueURL, DelaySeconds: &delaySeconds}
 }
-
-func (p *Sender) Send(ctx context.Context, data []byte, attributes map[string]string) (string, error) {
+func (p *Sender) Send(ctx context.Context, data []byte, attributes map[string]string) error {
 	attrs := MapToAttributes(attributes)
 	s := string(data)
-	result, err := p.Client.SendMessage(&sqs.SendMessageInput{
+	_, err := p.Client.SendMessage(&sqs.SendMessageInput{
 		DelaySeconds:      p.DelaySeconds,
 		MessageAttributes: attrs,
 		MessageBody:       aws.String(s),
 		QueueUrl:          p.QueueURL,
 	})
+	return err
+}
+func (p *Sender) SendBody(ctx context.Context, data []byte) error {
+	s := string(data)
+	_, err := p.Client.SendMessage(&sqs.SendMessageInput{
+		DelaySeconds: p.DelaySeconds,
+		MessageBody:  aws.String(s),
+		QueueUrl:     p.QueueURL,
+	})
+	return err
+}
+func (p *Sender) SendMessage(msg *sqs.SendMessageInput) (string, error) {
+	if msg == nil {
+		return "", nil
+	}
+	result, err := p.Client.SendMessage(msg)
 	if result != nil && result.MessageId != nil {
 		return *result.MessageId, err
 	} else {
